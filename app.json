@@ -3,7 +3,12 @@
   "buildpacks":[
     {
       "url": "heroku/maven"
+    },
+    {
+      "url": "https://github.com/heroku/heroku-buildpack-pgbouncer"
     }
+
+
 
   ]
 }
