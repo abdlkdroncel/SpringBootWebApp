@@ -1,0 +1,9 @@
+{
+  "name": "book-seller-springangular",
+  "buildpacks":[
+    {
+      "url": "heroku/maven"
+    }
+
+  ]
+}
