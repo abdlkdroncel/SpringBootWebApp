@@ -16,13 +16,15 @@ public class PurchaseHistoryController {
     @Autowired
     private IPurchaseHistoryService purchaseHistoryService;
 
-    @PostMapping
-    public ResponseEntity<?> savePurchaseHistory(@RequestBody PurchaseHistory purchaseHistory){
+    @PostMapping //api/purchase-history
+    public ResponseEntity<?> savePurchaseHistory(@RequestBody PurchaseHistory purchaseHistory)
+    {
         return new ResponseEntity<>(purchaseHistoryService.savePurchaseHistory(purchaseHistory), HttpStatus.CREATED);
     }
 
-    @GetMapping
-    public ResponseEntity<?> getAllPurchaseOfUser(@AuthenticationPrincipal UserPrincipal userPrincipal){
+    @GetMapping //api/purchase-history
+    public ResponseEntity<?> getAllPurchasesOfUser(@AuthenticationPrincipal UserPrincipal userPrincipal)
+    {
         return ResponseEntity.ok(purchaseHistoryService.findPurchasedItemOfUser(userPrincipal.getId()));
     }
 

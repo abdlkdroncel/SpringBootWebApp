@@ -27,22 +27,75 @@ public class JwtProvider implements IJwtProvider {
     @Value("${app.jwt.expiration-in-ms}")
     private Long JWT_EXPIRATION_IN_MS;
 
-    //token oluşturma
     @Override
-    public String generateToken(UserPrincipal auth){
-        String authorities=auth.getAuthorities()
-                .stream().
-                map(GrantedAuthority::getAuthority).
-                collect(Collectors.joining());
+    public String generateToken(UserPrincipal auth)
+    {
+        String authorities = auth.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .collect(Collectors.joining(","));
 
-        return Jwts.builder().setSubject(auth.getUsername()).
-                claim("roles",authorities).claim("userId",auth.getId()).
-                setExpiration(new Date(System.currentTimeMillis()+JWT_EXPIRATION_IN_MS)).
-                signWith(SignatureAlgorithm.HS512,JWT_SECRET).compact();
+        return Jwts.builder()
+                .setSubject(auth.getUsername())
+                .claim("roles", authorities)
+                .claim("userId", auth.getId())
+                .setExpiration(new Date(System.currentTimeMillis() + JWT_EXPIRATION_IN_MS))
+                .signWith(SignatureAlgorithm.HS512, JWT_SECRET)
+                .compact();
     }
-    private Claims extractClaims(HttpServletRequest request){
-        String token= SecurityUtils.extractAuthTokenFromRequest(request);
-        if(token==null){
+
+    @Override
+    public Authentication getAuthentication(HttpServletRequest request)
+    {
+        Claims claims = extractClaims(request);
+
+        if (claims == null)
+        {
+            return null;
+        }
+
+        String username = claims.getSubject();
+        Long userId = claims.get("userId", Long.class);
+
+        Set<GrantedAuthority> authorities = Arrays.stream(claims.get("roles").toString().split(","))
+                .map(SecurityUtils::covertToAuthority)
+                .collect(Collectors.toSet());
+
+        UserDetails userDetails = UserPrincipal.builder()
+                .username(username)
+                .authorities(authorities)
+                .id(userId)
+                .build();
+
+        if (username == null)
+        {
+            return null;
+        }
+        return new UsernamePasswordAuthenticationToken(userDetails, null, authorities);
+    }
+
+    @Override
+    public boolean validateToken(HttpServletRequest request)
+    {
+        Claims claims = extractClaims(request);
+
+        if (claims == null)
+        {
+            return false;
+        }
+
+        if (claims.getExpiration().before(new Date()))
+        {
+            return false;
+        }
+        return true;
+    }
+
+    private Claims extractClaims(HttpServletRequest request)
+    {
+        String token = SecurityUtils.extractAuthTokenFromRequest(request);
+
+        if (token == null)
+        {
             return null;
         }
 
@@ -51,45 +104,5 @@ public class JwtProvider implements IJwtProvider {
                 .parseClaimsJws(token)
                 .getBody();
     }
-
-    @Override
-    public Authentication getAuthentication(HttpServletRequest request){
-
-        Claims claims=extractClaims(request);
-
-        if(claims==null){
-            return null;
-        }
-        String username=claims.getSubject();
-        Long userId=claims.get("userId",Long.class);
-
-        Set<GrantedAuthority> authorities= Arrays.stream(claims.get("roles").toString().split(","))
-                .map(SecurityUtils::covertToAuthority)
-                .collect(Collectors.toSet());
-        UserDetails userDetails=UserPrincipal.builder().
-                    username(username)
-                .authorities(authorities)
-                        .id(userId).
-                build();
-        if(username==null){
-            return null;
-
-        }
-        return new UsernamePasswordAuthenticationToken(userDetails,null,authorities);
-    }
-
-    @Override
-    public boolean validateToken(HttpServletRequest request){
-        Claims claims=extractClaims(request);
-        if(claims==null){
-            return false;
-        }
-
-        if(claims.getExpiration().before(new Date())){
-            return false;
-        }
-        return true;
-    }
-
 
 }
